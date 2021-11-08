@@ -23,6 +23,7 @@ func main() {
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", ph.PostProduct)
+	postRouter.Use(ph.MiddlewareValidateProduct)
 
 	s := &http.Server{
 		Addr:         ":9090",
