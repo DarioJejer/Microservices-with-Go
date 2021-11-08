@@ -28,6 +28,11 @@ func (p *Products) ToJSON(w io.Writer) error {
 	return e.Encode(p)
 }
 
+func (p *Product) FromJSON(w io.Reader) error {
+	e := json.NewDecoder(w)
+	return e.Decode(p)
+}
+
 var productsList = []*Product{
 	&Product{
 		ID:           1,
