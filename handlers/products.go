@@ -44,7 +44,8 @@ func (p *Products) postProduct(rw http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(rw, "Unable to format JSON", http.StatusBadRequest)
+		return
 	}
 
-	p.l.Printf("Prod: %#v", prod)
+	data.PostProduct(prod)
 }

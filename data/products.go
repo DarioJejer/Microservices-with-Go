@@ -23,6 +23,17 @@ func GetProducts() Products {
 	return productsList
 }
 
+func PostProduct(p *Product) {
+	p.ID = nextId()
+	p.CreatedOn = time.Now().UTC().String()
+	productsList = append(productsList, p)
+}
+
+func nextId() int {
+	lp := productsList[len(productsList)-1]
+	return lp.ID + 1
+}
+
 func (p *Products) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(p)
