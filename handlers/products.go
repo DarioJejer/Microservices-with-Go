@@ -14,20 +14,7 @@ func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
 
-func (p *Products) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		p.getProducts(rw, r)
-		return
-	}
-	if r.Method == http.MethodPost {
-		p.postProduct(rw, r)
-		return
-	}
-
-	rw.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-func (p *Products) getProducts(rw http.ResponseWriter, r *http.Request) {
+func (p *Products) GetProducts(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET request")
 	lp := data.GetProducts()
 	err := lp.ToJSON(rw)
@@ -36,7 +23,7 @@ func (p *Products) getProducts(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Products) postProduct(rw http.ResponseWriter, r *http.Request) {
+func (p *Products) PostProduct(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle POST request")
 	prod := &data.Product{}
 
