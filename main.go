@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
 )
 
@@ -28,6 +29,16 @@ func main() {
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", ph.PostProduct)
 	postRouter.Use(ph.MiddlewareValidateProduct)
+
+	// adding handler from redoc to provide UI for the doc
+
+	// first specify options for the handler
+	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	// define the middlerware with the options
+	sh := middleware.Redoc(opts, nil)
+
+	getRouter.Handle("/docs", sh)
+	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	s := &http.Server{
 		Addr:         ":9090",
