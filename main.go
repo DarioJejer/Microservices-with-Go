@@ -30,6 +30,9 @@ func main() {
 	postRouter.HandleFunc("/", ph.PostProduct)
 	postRouter.Use(ph.MiddlewareValidateProduct)
 
+	deleteR := sm.Methods(http.MethodDelete).Subrouter()
+	deleteR.HandleFunc("/products/{id:[0-9]+}", ph.Delete)
+
 	// adding handler from redoc to provide UI for the doc
 
 	// first specify options for the handler

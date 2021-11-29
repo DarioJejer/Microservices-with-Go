@@ -2,11 +2,19 @@ basePath: /
 consumes:
 - application/json
 definitions:
+  GenericError:
+    description: GenericError is a generic error message returned by a server
+    properties:
+      message:
+        type: string
+        x-go-name: Message
+    type: object
+    x-go-package: app/handlers
   Product:
     properties:
       description:
         type: string
-        x-go-name: Destcription
+        x-go-name: Description
       id:
         format: int64
         type: integer
@@ -23,6 +31,16 @@ definitions:
         x-go-name: SKU
     type: object
     x-go-package: app/data
+  ValidationError:
+    description: ValidationError is a collection of validation error messages
+    properties:
+      messages:
+        items:
+          type: string
+        type: array
+        x-go-name: Messages
+    type: object
+    x-go-package: app/handlers
 info:
   description: Documentation for Product API
   title: Product API
@@ -37,9 +55,32 @@ paths:
           $ref: '#/responses/productsResponse'
       tags:
       - products
+  /products/{id}:
+    delete:
+      description: Update a products details
+      operationId: deleteProduct
+      responses:
+        "204":
+          $ref: '#/responses/noContentResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "501":
+          $ref: '#/responses/errorResponse'
+      tags:
+      - products
 produces:
 - application/json
 responses:
+  errorResponse:
+    description: Generic error message returned as a string
+    schema:
+      $ref: '#/definitions/GenericError'
+  errorValidation:
+    description: Validation errors defined as an array of strings
+    schema:
+      $ref: '#/definitions/ValidationError'
+  noContentResponse:
+    description: No content is returned by this API endpoint
   productsResponse:
     description: A list of products in the response
     schema:

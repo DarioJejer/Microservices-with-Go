@@ -38,6 +38,31 @@ type productsResponse struct {
 	Body []data.Product
 }
 
+// No content is returned by this API endpoint
+// swagger:response noContentResponse
+type noContentResponseWrapper struct {
+}
+
+//
+// NOTE: Types defined here are purely for documentation purposes
+// these types are not used by any of the handers
+
+// Generic error message returned as a string
+// swagger:response errorResponse
+type errorResponseWrapper struct {
+	// Description of the error
+	// in: body
+	Body GenericError
+}
+
+// Validation errors defined as an array of strings
+// swagger:response errorValidation
+type errorValidationWrapper struct {
+	// Collection of the errors
+	// in: body
+	Body ValidationError
+}
+
 func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
@@ -50,7 +75,7 @@ func NewProducts(l *log.Logger) *Products {
 func (p Products) GetProducts(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET request")
 	lp := data.GetProducts()
-	err := lp.ToJSON(rw)
+	err := data.ToJSON(lp, rw)
 	if err != nil {
 		http.Error(rw, "Unable to fomat JSON", http.StatusInternalServerError)
 	}
@@ -86,6 +111,68 @@ func (p Products) UpdateProducts(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, "Product not found", http.StatusInternalServerError)
 		return
 	}
+}
+
+// swagger:route DELETE /products/{id} products deleteProduct
+// Update a products details
+//
+// responses:
+//	204: noContentResponse
+//  404: errorResponse
+//  501: errorResponse
+
+// Delete handles DELETE requests and removes items from the database
+func (p *Products) Delete(rw http.ResponseWriter, r *http.Request) {
+	id := getProductID(r)
+
+	p.l.Println("[DEBUG] deleting record id", id)
+
+	err := data.DeleteProduct(id)
+	if err == data.ErrProductNotFound {
+		p.l.Println("[ERROR] deleting record id does not exist")
+
+		rw.WriteHeader(http.StatusNotFound)
+		data.ToJSON(&GenericError{Message: err.Error()}, rw)
+		return
+	}
+
+	if err != nil {
+		p.l.Println("[ERROR] deleting record", err)
+
+		rw.WriteHeader(http.StatusInternalServerError)
+		data.ToJSON(&GenericError{Message: err.Error()}, rw)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+}
+
+// getProductID returns the product ID from the URL
+// Panics if cannot convert the id into an integer
+// this should never happen as the router ensures that
+// this is a valid number
+func getProductID(r *http.Request) int {
+	// parse the product id from the url
+	vars := mux.Vars(r)
+
+	// convert the id into an integer and return
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+
+	return id
+}
+
+// GenericError is a generic error message returned by a server
+type GenericError struct {
+	Message string `json:"message"`
+}
+
+// ValidationError is a collection of validation error messages
+type ValidationError struct {
+	Messages []string `json:"messages"`
 }
 
 type KeyProduct struct{}
