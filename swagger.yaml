@@ -11,12 +11,15 @@ definitions:
     type: object
     x-go-package: app/handlers
   Product:
+    description: Product defines the structue for an API product
     properties:
       description:
         type: string
         x-go-name: Description
       id:
+        description: the id for this user
         format: int64
+        minimum: 1
         type: integer
         x-go-name: ID
       name:
@@ -29,6 +32,8 @@ definitions:
       sku:
         type: string
         x-go-name: SKU
+    required:
+    - id
     type: object
     x-go-package: app/data
   ValidationError:
