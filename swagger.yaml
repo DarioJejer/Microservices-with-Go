@@ -14,6 +14,8 @@ definitions:
     description: Product defines the structue for an API product
     properties:
       description:
+        description: the description for this poduct
+        maxLength: 10000
         type: string
         x-go-name: Description
       id:
@@ -23,17 +25,26 @@ definitions:
         type: integer
         x-go-name: ID
       name:
+        description: the name for this poduct
+        maxLength: 255
         type: string
         x-go-name: Name
       price:
+        description: the price for the product
         format: float
+        minimum: 0.01
         type: number
         x-go-name: Price
       sku:
+        description: the SKU for the product
+        pattern: '[a-z]+-[a-z]+-[a-z]+'
         type: string
         x-go-name: SKU
     required:
     - id
+    - name
+    - price
+    - sku
     type: object
     x-go-package: app/data
   ValidationError:
@@ -60,6 +71,30 @@ paths:
           $ref: '#/responses/productsResponse'
       tags:
       - products
+    post:
+      description: Create a new product
+      operationId: createProduct
+      responses:
+        "201":
+          $ref: '#/responses/productResponse'
+        "422":
+          $ref: '#/responses/errorValidation'
+        "501":
+          $ref: '#/responses/errorResponse'
+      tags:
+      - products
+    put:
+      description: Update a products details
+      operationId: updateProduct
+      responses:
+        "204":
+          $ref: '#/responses/noContentResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "422":
+          $ref: '#/responses/errorValidation'
+      tags:
+      - products
   /products/{id}:
     delete:
       description: Update a products details
@@ -70,6 +105,16 @@ paths:
         "404":
           $ref: '#/responses/errorResponse'
         "501":
+          $ref: '#/responses/errorResponse'
+      tags:
+      - products
+    get:
+      description: Return a list of products from the database
+      operationId: getProduct
+      responses:
+        "200":
+          $ref: '#/responses/productResponse'
+        "404":
           $ref: '#/responses/errorResponse'
       tags:
       - products
@@ -86,6 +131,10 @@ responses:
       $ref: '#/definitions/ValidationError'
   noContentResponse:
     description: No content is returned by this API endpoint
+  productResponse:
+    description: Data structure representing a single product
+    schema:
+      $ref: '#/definitions/Product'
   productsResponse:
     description: A list of products in the response
     schema:

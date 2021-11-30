@@ -1,6 +1,7 @@
 package main
 
 import (
+	"app/data"
 	"app/handlers"
 	"context"
 	"log"
@@ -15,7 +16,8 @@ import (
 
 func main() {
 	l := log.New(os.Stdout, "product-api", log.LstdFlags)
-	ph := handlers.NewProducts(l)
+	v := data.NewValidation()
+	ph := handlers.NewProducts(l, v)
 
 	sm := mux.NewRouter()
 
@@ -23,7 +25,7 @@ func main() {
 	getRouter.HandleFunc("/", ph.GetProducts)
 
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProducts)
+	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
 	putRouter.Use(ph.MiddlewareValidateProduct)
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()

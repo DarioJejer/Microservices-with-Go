@@ -1,24 +1,7 @@
-// Package classification Product API
-//
-// Documentation for Product API
-//
-// 	Schemes: http
-// 	BasePath: /
-// 	Version: 1.0.0
-//
-// 	Consumes:
-// 	- application/json
-//
-// 	Produces:
-// 	-application/json
-//
-// swagger:meta
 package handlers
 
 import (
 	"app/data"
-	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,45 +9,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// KeyProduct is a key used for the Product object in the context
+type KeyProduct struct{}
+
 type Products struct {
 	l *log.Logger
+	v *data.Validation
 }
 
-// A list of products in the response
-// swagger:response productsResponse
-type productsResponse struct {
-	// All products in the system
-	// in: body
-	Body []data.Product
-}
-
-// No content is returned by this API endpoint
-// swagger:response noContentResponse
-type noContentResponseWrapper struct {
-}
-
-//
-// NOTE: Types defined here are purely for documentation purposes
-// these types are not used by any of the handers
-
-// Generic error message returned as a string
-// swagger:response errorResponse
-type errorResponseWrapper struct {
-	// Description of the error
-	// in: body
-	Body GenericError
-}
-
-// Validation errors defined as an array of strings
-// swagger:response errorValidation
-type errorValidationWrapper struct {
-	// Collection of the errors
-	// in: body
-	Body ValidationError
-}
-
-func NewProducts(l *log.Logger) *Products {
-	return &Products{l}
+func NewProducts(l *log.Logger, v *data.Validation) *Products {
+	return &Products{l, v}
 }
 
 // swagger:route GET /products products listProducts
@@ -74,43 +28,93 @@ func NewProducts(l *log.Logger) *Products {
 
 func (p Products) GetProducts(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET request")
-	lp := data.GetProducts()
+	lp := data.ListAllProducts()
 	err := data.ToJSON(lp, rw)
 	if err != nil {
 		http.Error(rw, "Unable to fomat JSON", http.StatusInternalServerError)
 	}
 }
 
+// swagger:route GET /products/{id} products getProduct
+// Return a list of products from the database
+// responses:
+//	200: productResponse
+//	404: errorResponse
+
+// GetProduct handles GET requests
+func (p *Products) GetProduct(rw http.ResponseWriter, r *http.Request) {
+	id := getProductID(r)
+
+	p.l.Println("[DEBUG] get record id", id)
+
+	prod, err := data.GetProductByID(id)
+
+	switch err {
+	case nil:
+
+	case data.ErrProductNotFound:
+		p.l.Println("[ERROR] fetching product", err)
+
+		rw.WriteHeader(http.StatusNotFound)
+		data.ToJSON(&GenericError{Message: err.Error()}, rw)
+		return
+	default:
+		p.l.Println("[ERROR] fetching product", err)
+
+		rw.WriteHeader(http.StatusInternalServerError)
+		data.ToJSON(&GenericError{Message: err.Error()}, rw)
+		return
+	}
+
+	err = data.ToJSON(prod, rw)
+	if err != nil {
+		// we should never be here but log the error just incase
+		p.l.Println("[ERROR] serializing product", err)
+	}
+}
+
+// swagger:route POST /products products createProduct
+// Create a new product
+//
+// responses:
+//	201: productResponse
+//  422: errorValidation
+//  501: errorResponse
+
+// Create handles POST requests to add new products
 func (p Products) PostProduct(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle POST request")
 
 	prod := r.Context().Value(KeyProduct{}).(data.Product)
 
-	data.PostProduct(&prod)
+	data.AddProduct(&prod)
 }
 
-func (p Products) UpdateProducts(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		http.Error(rw, "Unable to convert id", http.StatusBadRequest)
-		return
-	}
+// swagger:route PUT /products products updateProduct
+// Update a products details
+//
+// responses:
+//	204: noContentResponse
+//  404: errorResponse
+//  422: errorValidation
+
+// Update handles PUT requests to update products
+func (p Products) UpdateProduct(rw http.ResponseWriter, r *http.Request) {
+	id := getProductID(r)
 
 	p.l.Println("Handle PUT Product", id)
 	//.Value() return an interface so we cast it with .(Product)
 	prod := r.Context().Value(KeyProduct{}).(data.Product)
 
-	err = data.UpdateProduct(id, &prod)
+	err := data.UpdateProduct(id, prod)
 	if err == data.ErrProductNotFound {
-		http.Error(rw, "Product not found", http.StatusNotFound)
+		rw.WriteHeader(http.StatusNotFound)
+		data.ToJSON(&GenericError{Message: "Product not found in database"}, rw)
 		return
 	}
 
-	if err != nil {
-		http.Error(rw, "Product not found", http.StatusInternalServerError)
-		return
-	}
+	// write the no content success header
+	rw.WriteHeader(http.StatusNoContent)
 }
 
 // swagger:route DELETE /products/{id} products deleteProduct
@@ -163,50 +167,4 @@ func getProductID(r *http.Request) int {
 	}
 
 	return id
-}
-
-// GenericError is a generic error message returned by a server
-type GenericError struct {
-	Message string `json:"message"`
-}
-
-// ValidationError is a collection of validation error messages
-type ValidationError struct {
-	Messages []string `json:"messages"`
-}
-
-type KeyProduct struct{}
-
-func (p Products) MiddlewareValidateProduct(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		prod := data.Product{}
-
-		err := prod.FromJSON(r.Body)
-		if err != nil {
-			p.l.Println("[ERROR] deserializing product", err)
-			http.Error(rw, "Error reading product", http.StatusBadRequest)
-			// the return statement will stop the execution of the handler chain
-			return
-		}
-
-		// validate the product
-		err = prod.Validate()
-		if err != nil {
-			p.l.Println("[ERROR] validating product", err)
-			http.Error(
-				rw,
-				fmt.Sprintf("Error validating product: $s", err),
-				http.StatusBadRequest,
-			)
-			// the return statement will stop the execution of the handler chain
-			return
-		}
-
-		// add the product to the context
-		ctx := context.WithValue(r.Context(), KeyProduct{}, prod)
-		r = r.WithContext(ctx)
-
-		// Call the next handler, which can be another middleware in the chain, or the final handler.
-		next.ServeHTTP(rw, r)
-	})
 }
