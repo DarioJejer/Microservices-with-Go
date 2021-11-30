@@ -68,3 +68,20 @@ type GenericError struct {
 type ValidationError struct {
 	Messages []string `json:"messages"`
 }
+
+// swagger:parameters updateProduct createProduct
+type productParamsWrapper struct {
+	// Product data structure to Update or Create.
+	// Note: the id field is ignored by update and create operations
+	// in: body
+	// required: true
+	Body data.Product
+}
+
+// swagger:parameters updateProduct getProduct deleteProduct
+type productIDParamsWrapper struct {
+	// The id of the product for which the operation relates
+	// in: path
+	// required: true
+	ID int `json:"id"`
+}
